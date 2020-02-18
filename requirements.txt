@@ -3,3 +3,4 @@ celery
 uwsgi
 eventlet
 SQLAlchemy
+Pillow
