@@ -4,3 +4,4 @@ uwsgi
 eventlet
 SQLAlchemy
 Pillow
+redis

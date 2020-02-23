@@ -4,8 +4,8 @@ from PIL import Image
 from queue import Queue
 from sqlalchemy import create_engine
 from celery.result import AsyncResult
+import redis
 import pickle
-
 
 # broker_url = 'pyamqp://guest@localhost//'
 # result_backend = 'db+sqlite:///results.db'
@@ -17,8 +17,7 @@ celery = make_celery(app)
 previous_statement = None
 engine = create_engine("sqlite:///results.db?check_same_thread=False")
 connection = engine.connect()
-
-
+r_db = redis.StrictRedis(host='127.0.0.1', port=6379, db=0,decode_responses=True)
 
 
 @app.route('/<string:filename>')
@@ -27,17 +26,30 @@ def hello_world(filename):
     previous_statement = BFS_3.delay(filename)
     return str(previous_statement.task_id)
 
+
 @app.route('/status/<string:filename>')
 def check_status(filename):
-    res = celery.AsyncResult(filename)
-    if res.ready():
-        result = connection.execute("select * from celery_taskmeta")
-        for row in result:
-            if row['task_id'] == filename:
-                return pickle.loads(row['result'])
+    all_keys  = r_db.keys()
+    received_key = "celery-task-meta-" + filename
+    print(received_key)
+    if r_db.get(received_key):
+        the_result = r_db.get(received_key)
+        if "null" in the_result:
+            the_result = the_result.replace("null","False")
+        result_dict = eval(the_result)
+        return result_dict['result']
     else:
-        return "Not Ready"
-
+        return 'Not Ready'
+    # print(r_db.get(received_key))
+    # return r_db.get(received_key)
+    # res = celery.AsyncResult(filename)
+    # if res.ready():
+    #     result = connection.execute("select * from celery_taskmeta")
+    #     for row in result:
+    #         if row['task_id'] == filename:
+    #             return pickle.loads(row['result'])
+    # else:
+    #     return "Not Ready"
 
     # global previous_statement
     # print(previous_statement)
@@ -47,13 +59,16 @@ def check_status(filename):
     # else:
     #     return "Not Ready"
 
+
 def iswhite(value):
-    if value == (255,255,255):
+    if value == (255, 255, 255):
         return True
 
+
 def getadjacent(n):
-    x,y = n
-    return [(x-1,y),(x,y-1),(x+1,y),(x,y+1)]
+    x, y = n
+    return [(x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1)]
+
 
 def BFS(query_string):
     query_list = query_string.split("_")
@@ -65,10 +80,10 @@ def BFS(query_string):
     print(start)
     print(end)
     print(filename)
-    base_img = Image.open(filename+".jpg")
+    base_img = Image.open(filename + ".jpg")
     pixels = base_img.load()
     queue = Queue()
-    queue.put([start]) # Wrapping the start tuple in a list
+    queue.put([start])  # Wrapping the start tuple in a list
 
     while not queue.empty():
 
@@ -87,9 +102,9 @@ def BFS(query_string):
             return str_a
 
         for adjacent in getadjacent(pixel):
-            x,y = adjacent
-            if iswhite(pixels[x,y]):
-                pixels[x,y] = (127,127,127) # see note
+            x, y = adjacent
+            if iswhite(pixels[x, y]):
+                pixels[x, y] = (127, 127, 127)  # see note
                 new_path = list(path)
                 new_path.append(adjacent)
                 queue.put(new_path)
@@ -100,6 +115,7 @@ def BFS(query_string):
 @celery.task()
 def BFS_3(query_string):
     return BFS(query_string)
+
 
 if __name__ == '__main__':
     app.run()
