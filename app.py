@@ -2,10 +2,11 @@ from flask import Flask
 from celery_app import make_celery
 from PIL import Image
 from queue import Queue
-from sqlalchemy import create_engine
-from celery.result import AsyncResult
+# from sqlalchemy import create_engine
+# from celery.result import AsyncResult
 import redis
-import pickle
+import os
+# import pickle
 
 # broker_url = 'pyamqp://guest@localhost//'
 # result_backend = 'db+sqlite:///results.db'
@@ -14,10 +15,11 @@ app = Flask(__name__)
 # app.config['CELERY_RESULT_BACKEND'] = result_backend
 app.config.from_object('celery_settings')
 celery = make_celery(app)
-previous_statement = None
-engine = create_engine("sqlite:///results.db?check_same_thread=False")
-connection = engine.connect()
-r_db = redis.StrictRedis(host='127.0.0.1', port=6379, db=0,decode_responses=True)
+CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL','redis://127.0.0.1:6379/0')
+# previous_statement = None
+# engine = create_engine("sqlite:///results.db?check_same_thread=False")
+# connection = engine.connect()
+r_db = redis.StrictRedis.from_url(CELERY_RESULT_BACKEND,decode_responses= True)
 
 
 @app.route('/<string:filename>')
@@ -32,6 +34,7 @@ def check_status(filename):
     all_keys  = r_db.keys()
     received_key = "celery-task-meta-" + filename
     print(received_key)
+    print(CELERY_RESULT_BACKEND)
     if r_db.get(received_key):
         the_result = r_db.get(received_key)
         if "null" in the_result:
