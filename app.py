@@ -2,11 +2,11 @@ from flask import Flask
 from celery_app import make_celery
 from PIL import Image
 from queue import Queue
-# from sqlalchemy import create_engine
-# from celery.result import AsyncResult
+from sqlalchemy import create_engine
+from celery.result import AsyncResult
 import redis
 import os
-# import pickle
+import pickle
 
 # broker_url = 'pyamqp://guest@localhost//'
 # result_backend = 'db+sqlite:///results.db'
@@ -16,7 +16,7 @@ app = Flask(__name__)
 app.config.from_object('celery_settings')
 celery = make_celery(app)
 CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL','redis://127.0.0.1:6379/0')
-# previous_statement = None
+previous_statement = None
 # engine = create_engine("sqlite:///results.db?check_same_thread=False")
 # connection = engine.connect()
 r_db = redis.StrictRedis.from_url(CELERY_RESULT_BACKEND,decode_responses= True)
@@ -43,8 +43,8 @@ def check_status(filename):
         return result_dict['result']
     else:
         return 'Not Ready'
-    # print(r_db.get(received_key))
-    # return r_db.get(received_key)
+    print(r_db.get(received_key))
+    return r_db.get(received_key)
     # res = celery.AsyncResult(filename)
     # if res.ready():
     #     result = connection.execute("select * from celery_taskmeta")
@@ -70,7 +70,7 @@ def iswhite(value):
 
 def getadjacent(n):
     x, y = n
-    return [(x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1)]
+    return [(x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1),(x-1,y-1),(x-1,y+1),(x+1,y-1),(x+1,y+1)]
 
 
 def BFS(query_string):
@@ -83,16 +83,22 @@ def BFS(query_string):
     print(start)
     print(end)
     print(filename)
+    # convert_to_bw(filename)
     base_img = Image.open(filename + ".jpg")
+    # base_img.putpixel(start,(127,0,0))
+    # base_img.putpixel(end, (127, 0, 0))
+    # base_img.save('duplicate.jpg')
     pixels = base_img.load()
-    queue = Queue()
-    queue.put([start])  # Wrapping the start tuple in a list
+    # queue = Queue()
+    queue = []
+    # queue.put([start])  # Wrapping the start tuple in a list
+    queue.append([start])
+    last_path = []
+    max_length = 0
+    while len(queue):
 
-    while not queue.empty():
-
-        path = queue.get()
+        path = queue.pop(0)
         pixel = path[-1]
-
         if pixel == end:
             a = path
             str_a = ""
@@ -102,7 +108,9 @@ def BFS(query_string):
             str_a = str_a.replace(')', '')
             str_a = str_a.replace(', ', ' ')
             str_a = str_a.rstrip()
+            # return path
             return str_a
+
 
         for adjacent in getadjacent(pixel):
             x, y = adjacent
@@ -110,8 +118,10 @@ def BFS(query_string):
                 pixels[x, y] = (127, 127, 127)  # see note
                 new_path = list(path)
                 new_path.append(adjacent)
-                queue.put(new_path)
-
+                queue.append(new_path)
+                last_path = new_path
+    # print(queue)
+    # print(last_path)
     print("Queue has been exhausted. No answer was found.")
 
 
