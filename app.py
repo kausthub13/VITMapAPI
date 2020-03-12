@@ -64,13 +64,15 @@ def check_status(filename):
 
 
 def iswhite(value):
-    if value == (255, 255, 255):
-        return True
-
+    distance_black = value[0]+value[1]+value[2]
+    distance_white = 765 - (value[0]+value[1]+value[2])
+    if value == (127, 127, 127) or distance_black < distance_white:
+        return False
+    return True
 
 def getadjacent(n):
     x, y = n
-    return [(x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1),(x-1,y-1),(x-1,y+1),(x+1,y-1),(x+1,y+1)]
+    return [(x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1)]
 
 
 def BFS(query_string):
@@ -122,7 +124,7 @@ def BFS(query_string):
                 last_path = new_path
     # print(queue)
     # print(last_path)
-    print("Queue has been exhausted. No answer was found.")
+    return "Queue has been exhausted. No answer was found."
 
 
 @celery.task()
