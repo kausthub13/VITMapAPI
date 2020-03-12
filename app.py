@@ -1,12 +1,12 @@
 from flask import Flask
 from celery_app import make_celery
 from PIL import Image
-from queue import Queue
-from sqlalchemy import create_engine
-from celery.result import AsyncResult
+# from queue import Queue
+# from sqlalchemy import create_engine
+# from celery.result import AsyncResult
 import redis
 import os
-import pickle
+# import pickle
 
 # broker_url = 'pyamqp://guest@localhost//'
 # result_backend = 'db+sqlite:///results.db'
