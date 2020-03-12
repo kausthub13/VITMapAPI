@@ -114,7 +114,7 @@ def BFS(query_string):
 
         for adjacent in getadjacent(pixel):
             x, y = adjacent
-            if iswhite(pixels[x, y]):
+            if x < 750 and y < 1000 and iswhite(pixels[x, y]):
                 pixels[x, y] = (127, 127, 127)  # see note
                 new_path = list(path)
                 new_path.append(adjacent)
